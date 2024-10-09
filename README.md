@@ -1,67 +1,221 @@
-[![Multi-Modality](agorabanner.png)](https://discord.com/servers/agora-999382051935506503)
+# ClusterOps
 
-# Python Package Template
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)](https://python.org)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/swarms-team/clusterops/test.yml?branch=master)](https://github.com/swarms-team/clusterops/actions)
+[![Coverage Status](https://img.shields.io/codecov/c/github/swarms-team/clusterops)](https://codecov.io/gh/swarms-team/clusterops)
+
+**ClusterOps** is an enterprise-grade Python library developed and maintained by the **Swarms Team** to help you manage and execute agents on specific **CPUs** and **GPUs** across clusters. This tool enables advanced CPU and GPU selection, dynamic task allocation, and resource monitoring, making it ideal for high-performance distributed computing environments.
+
 
 [![Join our Discord](https://img.shields.io/badge/Discord-Join%20our%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/agora-999382051935506503) [![Subscribe on YouTube](https://img.shields.io/badge/YouTube-Subscribe-red?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@kyegomez3242) [![Connect on LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/kye-g-38759a207/) [![Follow on X.com](https://img.shields.io/badge/X.com-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/kyegomezb)
 
-A easy, reliable, fluid template for python packages complete with docs, testing suites, readme's, github workflows, linting and much much more
 
+
+
+
+---
+
+## Features
+
+- **CPU Execution**: Dynamically assign tasks to specific CPU cores.
+- **GPU Execution**: Execute tasks on specific GPUs or dynamically select the best available GPU based on memory usage.
+- **Fault Tolerance**: Built-in retry logic with exponential backoff for handling transient errors.
+- **Resource Monitoring**: Real-time CPU and GPU resource monitoring (e.g., free memory on GPUs).
+- **Logging**: Advanced logging configuration with customizable log levels (DEBUG, INFO, ERROR).
+- **Scalability**: Supports multi-GPU task execution with Ray for distributed computation.
+
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+  - [Executing on Specific CPUs](#executing-on-specific-cpus)
+  - [Executing on Specific GPUs](#executing-on-specific-gpus)
+  - [Retry Logic and Fault Tolerance](#retry-logic-and-fault-tolerance)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Installation
 
-You can install the package using pip
+### Prerequisites
+
+- Python 3.8 or higher
+- `psutil`: CPU monitoring and task management
+- `GPUtil`: GPU resource monitoring
+- `Ray`: Distributed execution framework
+
+You can install the required dependencies using `pip`:
 
 ```bash
-pip install -e .
+pip install -r requirements.txt
 ```
 
-# Usage
+The `requirements.txt` file includes:
+
+```
+loguru>=0.6.0
+psutil>=5.8.0
+gputil>=1.4.0
+ray>=2.0.0
+```
+
+### Installing ClusterOps
+
+Clone the repository:
+
+```bash
+git clone https://github.com/swarms-team/clusterops.git
+cd clusterops
+```
+
+Then, install the package locally:
+
+```bash
+pip install .
+```
+
+---
+
+## Quick Start
+
+The following example demonstrates how to use ClusterOps to run tasks on specific CPUs and GPUs.
+
 ```python
-print("hello world")
+from clusterops import execute_with_cpu_cores, execute_on_gpu, retry_with_backoff
 
+# Sample function to execute
+def sample_task(n: int) -> int:
+    return n * n
+
+# Run the task on 4 CPU cores
+result_cpu = execute_with_cpu_cores(4, sample_task, 10)
+print(f"Result on CPU cores: {result_cpu}")
+
+# Run the task on the best available GPU with retries
+result_gpu = retry_with_backoff(execute_on_gpu, None, sample_task, 10)
+print(f"Result on GPU: {result_gpu}")
 ```
 
+---
 
+## Usage
 
-### Code Quality 🧹
+### Executing on Specific CPUs
 
-- `make style` to format the code
-- `make check_code_quality` to check code quality (PEP8 basically)
-- `black .`
-- `ruff . --fix`
+You can execute a task on a specific number of CPU cores using the `execute_with_cpu_cores()` function. It automatically adjusts CPU affinity on systems where this feature is supported.
 
-### Tests 🧪
+```python
+from clusterops import execute_with_cpu_cores
 
-[`pytests`](https://docs.pytest.org/en/7.1.x/) is used to run our tests.
+def sample_task(n: int) -> int:
+    return n * n
 
-### Publish on PyPi 🚀
-
-**Important**: Before publishing, edit `__version__` in [src/__init__](/src/__init__.py) to match the wanted new version.
-
-```
-poetry build
-poetry publish
+# Execute the task using 4 CPU cores
+result = execute_with_cpu_cores(4, sample_task, 10)
+print(f"Result on 4 CPU cores: {result}")
 ```
 
-### CI/CD 🤖
+### Executing on Specific GPUs
 
-We use [GitHub actions](https://github.com/features/actions) to automatically run tests and check code quality when a new PR is done on `main`.
+ClusterOps supports running tasks on specific GPUs or dynamically selecting the best available GPU (based on free memory).
 
-On any pull request, we will check the code quality and tests.
+```python
+from clusterops import execute_on_gpu
 
-When a new release is created, we will try to push the new code to PyPi. We use [`twine`](https://twine.readthedocs.io/en/stable/) to make our life easier. 
+def sample_task(n: int) -> int:
+    return n * n
 
-The **correct steps** to create a new realease are the following:
-- edit `__version__` in [src/__init__](/src/__init__.py) to match the wanted new version.
-- create a new [`tag`](https://git-scm.com/docs/git-tag) with the release name, e.g. `git tag v0.0.1 && git push origin v0.0.1` or from the GitHub UI.
-- create a new release from GitHub UI
+# Execute the task on GPU with ID 1
+result = execute_on_gpu(1, sample_task, 10)
+print(f"Result on GPU 1: {result}")
 
-The CI will run when you create the new release.
+# Execute the task on the best available GPU
+result_best_gpu = execute_on_gpu(None, sample_task, 10)
+print(f"Result on best available GPU: {result_best_gpu}")
+```
 
-# Docs
-We use MK docs. This repo comes with the zeta docs. All the docs configurations are already here along with the readthedocs configs.
+### Retry Logic and Fault Tolerance
 
+For production environments, ClusterOps includes retry logic with exponential backoff, which retries a task in case of failures.
 
+```python
+from clusterops import retry_with_backoff, execute_on_gpu
 
-# License
-MIT
+# Run task on the best GPU with retry logic
+result = retry_with_backoff(execute_on_gpu, None, sample_task, 10)
+print(f"Result with retry: {result}")
+```
+
+---
+
+## Configuration
+
+ClusterOps provides configuration through environment variables, making it adaptable for different environments (development, staging, production).
+
+### Environment Variables
+
+- **`LOG_LEVEL`**: Configures logging verbosity. Options: `DEBUG`, `INFO`, `ERROR`. Default is `INFO`.
+- **`RETRY_COUNT`**: Number of times to retry a task in case of failure. Default is 3.
+- **`RETRY_DELAY`**: Initial delay in seconds before retrying. Default is 1 second.
+
+Set these variables in your environment:
+
+```bash
+export LOG_LEVEL=DEBUG
+export RETRY_COUNT=5
+export RETRY_DELAY=2.0
+```
+
+---
+
+## Contributing
+
+We welcome contributions to ClusterOps! If you'd like to contribute, please follow these steps:
+
+1. **Fork the repository** on GitHub.
+2. **Clone your fork** locally:
+   ```bash
+   git clone https://github.com/your-username/clusterops.git
+   cd clusterops
+   ```
+3. **Create a feature branch** for your changes:
+   ```bash
+   git checkout -b feature/new-feature
+   ```
+4. **Install the development dependencies**:
+   ```bash
+   pip install -r dev-requirements.txt
+   ```
+5. **Make your changes**, and be sure to include tests.
+6. **Run tests** to ensure everything works:
+   ```bash
+   pytest
+   ```
+7. **Commit your changes** and push them to GitHub:
+   ```bash
+   git commit -m "Add new feature"
+   git push origin feature/new-feature
+   ```
+8. **Submit a pull request** on GitHub, and we’ll review it as soon as possible.
+
+### Reporting Issues
+
+If you encounter any issues, please create a [GitHub issue](https://github.com/swarms-team/clusterops/issues).
+
+---
+
+## License
+
+ClusterOps is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
+---
+
+## Contact
+
+For any questions, feedback, or contributions, please contact the **Swarms Team** at [contact@swarms.world](mailto:contact@swarms.world).
