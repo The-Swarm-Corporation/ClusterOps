@@ -57,19 +57,33 @@ pip3 install -U clusterops
 The following example demonstrates how to use ClusterOps to run tasks on specific CPUs and GPUs.
 
 ```python
-from clusterops import execute_with_cpu_cores, execute_on_gpu, retry_with_backoff
+from clusterops import (
+   list_available_cpus,
+   execute_with_cpu_cores,
+   list_available_gpus,
+   execute_on_gpu,
+   execute_on_multiple_gpus,
+)
 
-# Sample function to execute
+# Example function to run
 def sample_task(n: int) -> int:
     return n * n
 
-# Run the task on 4 CPU cores
-result_cpu = execute_with_cpu_cores(4, sample_task, 10)
-print(f"Result on CPU cores: {result_cpu}")
 
-# Run the task on the best available GPU with retries
-result_gpu = retry_with_backoff(execute_on_gpu, None, sample_task, 10)
-print(f"Result on GPU: {result_gpu}")
+# List CPUs and execute on CPU 0
+cpus = list_available_cpus()
+execute_on_cpu(0, sample_task, 10)
+
+# List CPUs and execute using 4 CPU cores
+execute_with_cpu_cores(4, sample_task, 10)
+
+# List GPUs and execute on GPU 0
+gpus = list_available_gpus()
+execute_on_gpu(0, sample_task, 10)
+
+# Execute across multiple GPUs
+execute_on_multiple_gpus([0, 1], sample_task, 10)
+
 ```
 
 ---
