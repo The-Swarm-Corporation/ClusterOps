@@ -151,7 +151,7 @@ We welcome contributions to ClusterOps! If you'd like to contribute, please foll
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/your-username/clusterops.git
+   git clone https://github.com/The-Swarm-Corporation/ClusterOps.git
    cd clusterops
    ```
 3. **Create a feature branch** for your changes:
@@ -176,7 +176,7 @@ We welcome contributions to ClusterOps! If you'd like to contribute, please foll
 
 ### Reporting Issues
 
-If you encounter any issues, please create a [GitHub issue](https://github.com/swarms-team/clusterops/issues).
+If you encounter any issues, please create a [GitHub issue](https://github.com/the-swarm-corporation/clusterops/issues).
 
 ---
 
@@ -188,4 +188,4 @@ ClusterOps is licensed under the MIT License. See the [LICENSE](LICENSE) file fo
 
 ## Contact
 
-For any questions, feedback, or contributions, please contact the **Swarms Team** at [contact@swarms.world](mailto:contact@swarms.world).
+For any questions, feedback, or contributions, please contact the **Swarms Team** at [kye@swarms.world](mailto:kye@swarms.world).
