@@ -4,6 +4,24 @@ from typing import Callable, List, Any
 from loguru import logger
 import GPUtil
 import ray
+import os
+import sys
+from typing import Optional
+import time
+
+
+# Configurable environment variables
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+RETRY_COUNT = int(os.getenv("RETRY_COUNT", 3))
+RETRY_DELAY = float(os.getenv("RETRY_DELAY", 1.0))
+
+# Configure Loguru logger for detailed logging
+logger.remove()
+logger.add(
+    sys.stderr,
+    level=LOG_LEVEL.upper(),
+    format="{time} | {level} | {message}",
+)
 
 
 def list_available_cpus() -> List[int]:
@@ -25,6 +43,25 @@ def list_available_cpus() -> List[int]:
     except Exception as e:
         logger.error(f"Error listing CPUs: {e}")
         raise
+
+
+def select_best_gpu() -> Optional[int]:
+    """
+    Selects the GPU with the most free memory.
+
+    Returns:
+        Optional[int]: The GPU ID of the best available GPU, or None if no GPUs are available.
+    """
+    try:
+        gpus = list_available_gpus()
+        best_gpu = max(gpus, key=lambda gpu: gpu["memoryFree"])
+        logger.info(
+            f"Selected GPU {best_gpu['id']} with {best_gpu['memoryFree']} MB free memory."
+        )
+        return best_gpu["id"]
+    except Exception as e:
+        logger.error(f"Error selecting best GPU: {e}")
+        return None
 
 
 def execute_on_cpu(
@@ -67,6 +104,44 @@ def execute_on_cpu(
     except Exception as e:
         logger.error(f"Error executing on CPU {cpu_id}: {e}")
         raise
+
+
+def retry_with_backoff(
+    func: Callable,
+    retries: int = RETRY_COUNT,
+    delay: float = RETRY_DELAY,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    """
+    Retries a callable function with exponential backoff in case of failure.
+
+    Args:
+        func (Callable): The function to execute with retries.
+        retries (int): Number of retries. Defaults to RETRY_COUNT from env.
+        delay (float): Delay between retries in seconds. Defaults to RETRY_DELAY from env.
+        *args (Any): Arguments for the callable.
+        **kwargs (Any): Keyword arguments for the callable.
+
+    Returns:
+        Any: The result of the function execution.
+
+    Raises:
+        Exception: After all retries fail.
+    """
+    attempt = 0
+    while attempt <= retries:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(
+                f"Error on attempt {attempt + 1}/{retries}: {e}"
+            )
+            if attempt == retries:
+                logger.error(f"All {retries} retries failed.")
+                raise
+            attempt += 1
+            time.sleep(delay * (2**attempt))  # Exponential backoff
 
 
 def execute_with_cpu_cores(

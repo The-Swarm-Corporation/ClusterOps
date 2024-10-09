@@ -88,56 +88,6 @@ execute_on_multiple_gpus([0, 1], sample_task, 10)
 
 ---
 
-## Usage
-
-### Executing on Specific CPUs
-
-You can execute a task on a specific number of CPU cores using the `execute_with_cpu_cores()` function. It automatically adjusts CPU affinity on systems where this feature is supported.
-
-```python
-from clusterops import execute_with_cpu_cores
-
-def sample_task(n: int) -> int:
-    return n * n
-
-# Execute the task using 4 CPU cores
-result = execute_with_cpu_cores(4, sample_task, 10)
-print(f"Result on 4 CPU cores: {result}")
-```
-
-### Executing on Specific GPUs
-
-ClusterOps supports running tasks on specific GPUs or dynamically selecting the best available GPU (based on free memory).
-
-```python
-from clusterops import execute_on_gpu
-
-def sample_task(n: int) -> int:
-    return n * n
-
-# Execute the task on GPU with ID 1
-result = execute_on_gpu(1, sample_task, 10)
-print(f"Result on GPU 1: {result}")
-
-# Execute the task on the best available GPU
-result_best_gpu = execute_on_gpu(None, sample_task, 10)
-print(f"Result on best available GPU: {result_best_gpu}")
-```
-
-### Retry Logic and Fault Tolerance
-
-For production environments, ClusterOps includes retry logic with exponential backoff, which retries a task in case of failures.
-
-```python
-from clusterops import retry_with_backoff, execute_on_gpu
-
-# Run task on the best GPU with retry logic
-result = retry_with_backoff(execute_on_gpu, None, sample_task, 10)
-print(f"Result with retry: {result}")
-```
-
----
-
 ## Configuration
 
 ClusterOps provides configuration through environment variables, making it adaptable for different environments (development, staging, production).
@@ -155,6 +105,227 @@ export LOG_LEVEL=DEBUG
 export RETRY_COUNT=5
 export RETRY_DELAY=2.0
 ```
+
+-----
+
+## Docs
+
+---
+
+### `list_available_cpus() -> List[int]`
+
+**Description:**  
+Lists all available CPU cores on the system.
+
+**Returns:**  
+- `List[int]`: A list of available CPU core indices.
+
+**Raises:**  
+- `RuntimeError`: If no CPUs are found.
+
+**Example Usage:**
+
+```python
+cpus = list_available_cpus()
+print(f"Available CPUs: {cpus}")
+```
+
+---
+
+### `select_best_gpu() -> Optional[int]`
+
+**Description:**  
+Selects the GPU with the most free memory.
+
+**Returns:**  
+- `Optional[int]`: The GPU ID of the best available GPU, or `None` if no GPUs are available.
+
+**Example Usage:**
+
+```python
+best_gpu = select_best_gpu()
+print(f"Best GPU ID: {best_gpu}")
+```
+
+---
+
+### `execute_on_cpu(cpu_id: int, func: Callable, *args: Any, **kwargs: Any) -> Any`
+
+**Description:**  
+Executes a function on a specific CPU core.
+
+**Arguments:**  
+- `cpu_id (int)`: The CPU core to run the function on.
+- `func (Callable)`: The function to be executed.
+- `*args (Any)`: Positional arguments for the function.
+- `**kwargs (Any)`: Keyword arguments for the function.
+
+**Returns:**  
+- `Any`: The result of the function execution.
+
+**Raises:**  
+- `ValueError`: If the CPU core specified is invalid.
+- `RuntimeError`: If there is an error executing the function on the CPU.
+
+**Example Usage:**
+
+```python
+result = execute_on_cpu(0, sample_task, 10)
+print(f"Result: {result}")
+```
+
+---
+
+### `retry_with_backoff(func: Callable, retries: int = RETRY_COUNT, delay: float = RETRY_DELAY, *args: Any, **kwargs: Any) -> Any`
+
+**Description:**  
+Retries a function with exponential backoff in case of failure.
+
+**Arguments:**  
+- `func (Callable)`: The function to execute with retries.
+- `retries (int)`: Number of retries. Defaults to `RETRY_COUNT`.
+- `delay (float)`: Delay between retries in seconds. Defaults to `RETRY_DELAY`.
+- `*args (Any)`: Positional arguments for the function.
+- `**kwargs (Any)`: Keyword arguments for the function.
+
+**Returns:**  
+- `Any`: The result of the function execution.
+
+**Raises:**  
+- `Exception`: After all retries fail.
+
+**Example Usage:**
+
+```python
+result = retry_with_backoff(sample_task, retries=5, delay=2, n=10)
+print(f"Result after retries: {result}")
+```
+
+---
+
+### `execute_with_cpu_cores(core_count: int, func: Callable, *args: Any, **kwargs: Any) -> Any`
+
+**Description:**  
+Executes a function using a specified number of CPU cores.
+
+**Arguments:**  
+- `core_count (int)`: The number of CPU cores to run the function on.
+- `func (Callable)`: The function to be executed.
+- `*args (Any)`: Positional arguments for the function.
+- `**kwargs (Any)`: Keyword arguments for the function.
+
+**Returns:**  
+- `Any`: The result of the function execution.
+
+**Raises:**  
+- `ValueError`: If the number of CPU cores specified is invalid or exceeds available cores.
+- `RuntimeError`: If there is an error executing the function on the specified CPU cores.
+
+**Example Usage:**
+
+```python
+result = execute_with_cpu_cores(4, sample_task, 10)
+print(f"Result: {result}")
+```
+
+---
+
+### `list_available_gpus() -> List[str]`
+
+**Description:**  
+Lists all available GPUs on the system.
+
+**Returns:**  
+- `List[str]`: A list of available GPU names.
+
+**Raises:**  
+- `RuntimeError`: If no GPUs are found.
+
+**Example Usage:**
+
+```python
+gpus = list_available_gpus()
+print(f"Available GPUs: {gpus}")
+```
+
+---
+
+### `execute_on_gpu(gpu_id: int, func: Callable, *args: Any, **kwargs: Any) -> Any`
+
+**Description:**  
+Executes a function on a specific GPU using Ray.
+
+**Arguments:**  
+- `gpu_id (int)`: The GPU to run the function on.
+- `func (Callable)`: The function to be executed.
+- `*args (Any)`: Positional arguments for the function.
+- `**kwargs (Any)`: Keyword arguments for the function.
+
+**Returns:**  
+- `Any`: The result of the function execution.
+
+**Raises:**  
+- `ValueError`: If the GPU index is invalid.
+- `RuntimeError`: If there is an error executing the function on the GPU.
+
+**Example Usage:**
+
+```python
+result = execute_on_gpu(0, sample_task, 10)
+print(f"Result: {result}")
+```
+
+---
+
+### `execute_on_multiple_gpus(gpu_ids: List[int], func: Callable, *args: Any, **kwargs: Any) -> List[Any]`
+
+**Description:**  
+Executes a function across multiple GPUs using Ray.
+
+**Arguments:**  
+- `gpu_ids (List[int])`: The list of GPU IDs to run the function on.
+- `func (Callable)`: The function to be executed.
+- `*args (Any)`: Positional arguments for the function.
+- `**kwargs (Any)`: Keyword arguments for the function.
+
+**Returns:**  
+- `List[Any]`: A list of results from the execution on each GPU.
+
+**Raises:**  
+- `ValueError`: If any GPU index is invalid.
+- `RuntimeError`: If there is an error executing the function on the GPUs.
+
+**Example Usage:**
+
+```python
+result = execute_on_multiple_gpus([0, 1], sample_task, 10)
+print(f"Results: {result}")
+```
+
+---
+
+### `sample_task(n: int) -> int`
+
+**Description:**  
+A sample task function that returns the square of a number.
+
+**Arguments:**  
+- `n (int)`: Input number to be squared.
+
+**Returns:**  
+- `int`: The square of the input number.
+
+**Example Usage:**
+
+```python
+result = sample_task(10)
+print(f"Square of 10: {result}")
+```
+
+---
+
+This documentation provides a clear description of the function's purpose, arguments, return values, potential exceptions, and examples of how to use them.
+
 
 ---
 
