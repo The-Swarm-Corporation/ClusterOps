@@ -43,41 +43,9 @@
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.8 or higher
-- `psutil`: CPU monitoring and task management
-- `GPUtil`: GPU resource monitoring
-- `Ray`: Distributed execution framework
-
-You can install the required dependencies using `pip`:
 
 ```bash
-pip install -r requirements.txt
-```
-
-The `requirements.txt` file includes:
-
-```
-loguru>=0.6.0
-psutil>=5.8.0
-gputil>=1.4.0
-ray>=2.0.0
-```
-
-### Installing ClusterOps
-
-Clone the repository:
-
-```bash
-git clone https://github.com/swarms-team/clusterops.git
-cd clusterops
-```
-
-Then, install the package locally:
-
-```bash
-pip install .
+pip3 install -U clusterops
 ```
 
 ---
