@@ -1,3 +1,5 @@
 loguru
 ray
 GPUtil
+tenacity
+psutil

@@ -1,4 +1,3 @@
-import asyncio  # For async execution
 import os
 import sys
 import time
@@ -29,72 +28,6 @@ logger.add(
 )
 
 
-### 1. ASYNC TASK EXECUTION ###
-async def async_execute(
-    func: Callable, *args: Any, **kwargs: Any
-) -> Any:
-    """
-    Asynchronously executes a callable function.
-
-    Args:
-        func (Callable): The function to execute asynchronously.
-        *args (Any): Arguments for the callable.
-        **kwargs (Any): Keyword arguments for the callable.
-
-    Returns:
-        Any: The result of the function execution.
-    """
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, func, *args, **kwargs)
-    logger.info("Asynchronous task completed.")
-    return result
-
-
-### 2. TASK SCHEDULING & PRIORITY MANAGEMENT ###
-def execute_with_priority(
-    priority: str,
-    func: Callable,
-    delay: float = 0.0,
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    """
-    Executes a callable with priority management and optional delay.
-
-    Args:
-        priority (str): Task priority ('high', 'low').
-        delay (float): Optional delay before executing the task (default: 0).
-        func (Callable): The function to be executed.
-        *args (Any): Arguments for the callable.
-        **kwargs (Any): Keyword arguments for the callable.
-
-    Returns:
-        Any: The result of the function execution.
-
-    Raises:
-        ValueError: If priority is not valid.
-    """
-    try:
-        if priority not in ["high", "low"]:
-            raise ValueError("Invalid priority. Use 'high' or 'low'.")
-
-        logger.info(
-            f"Task scheduled with {priority} priority and {delay}s delay."
-        )
-        if delay > 0:
-            time.sleep(delay)
-
-        # Execute the function
-        result = func(*args, **kwargs)
-        logger.info(f"Task with {priority} priority completed.")
-        return result
-
-    except Exception as e:
-        logger.error(f"Error executing task with priority: {e}")
-        raise
-
-
-### 3. RESOURCE MONITORING & ALERTS ###
 def monitor_resources():
     """
     Continuously monitors CPU and GPU resources and logs alerts when thresholds are crossed.
@@ -126,7 +59,6 @@ def monitor_resources():
         raise
 
 
-### 4. TASK PROFILING & METRICS COLLECTION ###
 def profile_execution(
     func: Callable, *args: Any, **kwargs: Any
 ) -> Any:
@@ -168,7 +100,6 @@ def profile_execution(
     return result
 
 
-### 5. DISTRIBUTED EXECUTION ACROSS NODES ###
 def distributed_execute_on_gpus(
     gpu_ids: List[int], func: Callable, *args: Any, **kwargs: Any
 ) -> List[Any]:
@@ -218,25 +149,16 @@ def distributed_execute_on_gpus(
         raise
 
 
-# import asyncio
+# # Example function to run
+# def sample_task(n: int) -> int:
+#     return n * n
 
 
-# Example function to run
-def sample_task(n: int) -> int:
-    return n * n
+# # Monitor resources during execution
+# monitor_resources()
 
+# # Profile task execution and collect metrics
+# profile_execution(sample_task, 10)
 
-# Run task asynchronously
-asyncio.run(async_execute(sample_task, 10))
-
-# Schedule task with high priority and delay of 5 seconds
-execute_with_priority("high", sample_task, delay=5, n=10)
-
-# Monitor resources during execution
-monitor_resources()
-
-# Profile task execution and collect metrics
-profile_execution(sample_task, 10)
-
-# Execute distributed across multiple GPUs
-distributed_execute_on_gpus([0, 1], sample_task, 10)
+# # Execute distributed across multiple GPUs
+# distributed_execute_on_gpus([0, 1], sample_task, 10)

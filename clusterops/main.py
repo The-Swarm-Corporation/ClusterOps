@@ -8,6 +8,12 @@ import GPUtil
 import psutil
 import ray
 from loguru import logger
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 # Configurable environment variables
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -23,6 +29,11 @@ logger.add(
 )
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def list_available_cpus() -> List[int]:
     """
     Lists all available CPU cores.
@@ -44,6 +55,11 @@ def list_available_cpus() -> List[int]:
         raise
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def select_best_gpu() -> Optional[int]:
     """
     Selects the GPU with the most free memory.
@@ -63,6 +79,11 @@ def select_best_gpu() -> Optional[int]:
         return None
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def execute_on_cpu(
     cpu_id: int, func: Callable, *args: Any, **kwargs: Any
 ) -> Any:
@@ -105,6 +126,11 @@ def execute_on_cpu(
         raise
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def retry_with_backoff(
     func: Callable,
     retries: int = RETRY_COUNT,
@@ -143,6 +169,11 @@ def retry_with_backoff(
             time.sleep(delay * (2**attempt))  # Exponential backoff
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def execute_with_cpu_cores(
     core_count: int, func: Callable, *args: Any, **kwargs: Any
 ) -> Any:
@@ -193,6 +224,11 @@ def execute_with_cpu_cores(
         raise
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def list_available_gpus() -> List[str]:
     """
     Lists all available GPUs.
@@ -215,6 +251,11 @@ def list_available_gpus() -> List[str]:
         raise
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def execute_on_gpu(
     gpu_id: int, func: Callable, *args: Any, **kwargs: Any
 ) -> Any:
@@ -257,8 +298,18 @@ def execute_on_gpu(
         raise
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
 def execute_on_multiple_gpus(
-    gpu_ids: List[int], func: Callable, *args: Any, **kwargs: Any
+    gpu_ids: List[int],
+    func: Callable,
+    all_gpus: bool = False,
+    timeout: float = None,
+    *args: Any,
+    **kwargs: Any,
 ) -> List[Any]:
     """
     Executes a callable across multiple GPUs using Ray.
@@ -287,7 +338,12 @@ def execute_on_multiple_gpus(
         )
 
         if not ray.is_initialized():
-            ray.init(ignore_reinit_error=True, log_to_driver=False)
+            ray.init(
+                ignore_reinit_error=True,
+                log_to_driver=False,
+                *args,
+                **kwargs,
+            )
 
         @ray.remote(num_gpus=1)
         def task_wrapper(*args, **kwargs):
@@ -296,7 +352,7 @@ def execute_on_multiple_gpus(
         result_futures = [
             task_wrapper.remote(*args, **kwargs) for _ in gpu_ids
         ]
-        results = ray.get(result_futures)
+        results = ray.get(result_futures, timeout)
         logger.info(f"Execution on GPUs {gpu_ids} completed.")
         return results
     except Exception as e:
