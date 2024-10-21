@@ -363,6 +363,11 @@ We welcome contributions to ClusterOps! If you'd like to contribute, please foll
 
 If you encounter any issues, please create a [GitHub issue](https://github.com/the-swarm-corporation/clusterops/issues).
 
+
+## Further Documentation
+
+[CLICK HERE](/DOCS.md)
+
 ---
 
 ## License
