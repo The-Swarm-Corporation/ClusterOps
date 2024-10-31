@@ -29,19 +29,6 @@
 
 ---
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Usage](#usage)
-  - [Executing on Specific CPUs](#executing-on-specific-cpus)
-  - [Executing on Specific GPUs](#executing-on-specific-gpus)
-  - [Retry Logic and Fault Tolerance](#retry-logic-and-fault-tolerance)
-- [Configuration](#configuration)
-- [Contributing](#contributing)
-- [License](#license)
-
----
 
 ## Installation
 
@@ -85,6 +72,25 @@ execute_on_gpu(0, sample_task, 10)
 execute_on_multiple_gpus([0, 1], sample_task, 10)
 
 ```
+
+## GPU Scheduler
+
+The GPU Scheduler is a Ray Serve deployment that manages job execution with fault tolerance, job retries, and scaling. It uses the GPUJobExecutor to execute tasks on available GPUs.
+
+See the [GPU Scheduler](/clusterops/gpu_scheduler.py) for more details.
+
+```python
+from clusterops import gpu_scheduler
+
+
+async def sample_task(n: int) -> int:
+    return n * n
+
+
+print(gpu_scheduler(sample_task, priority=1, n=10))
+
+```
+
 
 ---
 
