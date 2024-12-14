@@ -72,7 +72,7 @@ execute_on_gpu(0, sample_task, 10)
 execute_on_multiple_gpus([0, 1], sample_task, 10)
 
 ```
-
+<!-- 
 ## GPU Scheduler
 
 The GPU Scheduler is a Ray Serve deployment that manages job execution with fault tolerance, job retries, and scaling. It uses the GPUJobExecutor to execute tasks on available GPUs.
@@ -88,6 +88,45 @@ async def sample_task(n: int) -> int:
 
 
 print(gpu_scheduler(sample_task, priority=1, n=10))
+
+``` -->
+
+
+### Executing callables in parallel
+
+This section demonstrates how to execute multiple callables in parallel using the `execute_parallel_optimized` function from the `clusterops.execute_callables_parallel` module.
+
+```python
+from clusterops.execute_callables_parallel import (
+   execute_parallel_optimized,
+)
+
+
+def add(a, b):
+    return a + b
+
+
+def multiply(a, b):
+    return a * b
+
+
+def power(a, b):
+    return a**b
+
+
+if __name__ == "__main__":
+    # List of callables with their respective arguments
+    callables_with_args = [
+        (add, (2, 3)),
+        (multiply, (5, 4)),
+        (power, (2, 10)),
+    ]
+
+    # Execute the callables in parallel
+    results = execute_parallel_optimized(callables_with_args)
+
+    # Print the results
+    print("Results:", results)
 
 ```
 

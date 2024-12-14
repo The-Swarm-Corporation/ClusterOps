@@ -84,17 +84,16 @@ def execute_parallel_optimized(
             chunksize=chunk_size,
         )
 
+        pool.close()
+        pool.join()
+
+        return results
+
     except Exception as e:
         logger.critical(
             f"Parallel execution failed due to an error: {e}"
         )
         raise
-
-    logger.info(
-        f"Optimized parallel execution completed. {len(results)} tasks executed."
-    )
-    pool.close()  # Ensure pool is properly closed
-    pool.join()
 
 
 #     return results
@@ -112,16 +111,16 @@ def execute_parallel_optimized(
 #     return a**b
 
 
-# # if __name__ == "__main__":
-# #     # List of callables with their respective arguments
-# #     callables_with_args = [
-# #         (add, (2, 3)),
-# #         (multiply, (5, 4)),
-# #         (power, (2, 10)),
-# #     ]
+# if __name__ == "__main__":
+#     # List of callables with their respective arguments
+#     callables_with_args = [
+#         (add, (2, 3)),
+#         (multiply, (5, 4)),
+#         (power, (2, 10)),
+#     ]
 
-# #     # Execute the callables in parallel
-# #     results = execute_parallel_optimized(callables_with_args)
+#     # Execute the callables in parallel
+#     results = execute_parallel_optimized(callables_with_args)
 
-# #     # Print the results
-# #     print("Results:", results)
+#     # Print the results
+#     print("Results:", results)

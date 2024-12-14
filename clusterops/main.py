@@ -56,9 +56,7 @@ def list_available_cpus() -> List[int]:
     except Exception as e:
         logger.error(f"Error listing CPUs: {e}")
         raise
-    
-    
-    
+
 
 @retry(
     stop=stop_after_attempt(3),
@@ -87,16 +85,22 @@ def execute_with_cpu_cores(
     try:
         # Get all CPU cores
         all_cpus = list_available_cpus()
-        
+
         # Find cores currently in use by checking CPU utilization
-        cpu_percent_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+        cpu_percent_per_core = psutil.cpu_percent(
+            interval=0.1, percpu=True
+        )
         unused_cores = [
-            cpu for cpu, usage in enumerate(cpu_percent_per_core) 
-            if usage < 10.0  # Consider cores with <10% usage as unused
+            cpu
+            for cpu, usage in enumerate(cpu_percent_per_core)
+            if usage
+            < 10.0  # Consider cores with <10% usage as unused
         ]
 
         if not unused_cores:
-            logger.warning("No unused CPU cores found, falling back to all available cores")
+            logger.warning(
+                "No unused CPU cores found, falling back to all available cores"
+            )
             unused_cores = all_cpus
 
         if core_count > len(unused_cores) or core_count <= 0:
@@ -126,11 +130,7 @@ def execute_with_cpu_cores(
             f"Error executing with {core_count} CPU cores: {e}"
         )
         raise
-    
-    
-    
 
-    
 
 @retry(
     stop=stop_after_attempt(3),
@@ -157,19 +157,27 @@ def execute_with_all_cpu_cores(
     try:
         # Get all CPU cores
         all_cpus = list_available_cpus()
-        
+
         # Find cores currently in use by checking CPU utilization
-        cpu_percent_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+        cpu_percent_per_core = psutil.cpu_percent(
+            interval=0.1, percpu=True
+        )
         unused_cores = [
-            cpu for cpu, usage in enumerate(cpu_percent_per_core) 
-            if usage < 10.0  # Consider cores with <10% usage as unused
+            cpu
+            for cpu, usage in enumerate(cpu_percent_per_core)
+            if usage
+            < 10.0  # Consider cores with <10% usage as unused
         ]
 
         if not unused_cores:
-            logger.warning("No unused CPU cores found, falling back to all available cores")
+            logger.warning(
+                "No unused CPU cores found, falling back to all available cores"
+            )
             unused_cores = all_cpus
-            
-        logger.info(f"Found {len(unused_cores)} unused CPU cores out of {len(all_cpus)} total cores")
+
+        logger.info(
+            f"Found {len(unused_cores)} unused CPU cores out of {len(all_cpus)} total cores"
+        )
 
         if platform.system() == "Darwin":  # macOS
             logger.warning(
@@ -188,12 +196,8 @@ def execute_with_all_cpu_cores(
         )
         return result
     except Exception as e:
-        logger.error(
-            f"Error executing with CPU cores: {e}"
-        )
+        logger.error(f"Error executing with CPU cores: {e}")
         raise
-
-
 
 
 @retry(
@@ -259,7 +263,6 @@ def get_optimal_core_count(requested_cores: int = None) -> int:
         return max(1, int(available * 0.75))
 
     return max(1, min(requested_cores, available))
-
 
 
 @retry(
