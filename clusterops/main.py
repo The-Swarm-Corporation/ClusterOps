@@ -8,6 +8,9 @@ import GPUtil
 import psutil
 import ray
 from loguru import logger
+from ray.util.multiprocessing import (
+    Pool,
+)  # For distributed multi-node execution
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -53,6 +56,144 @@ def list_available_cpus() -> List[int]:
     except Exception as e:
         logger.error(f"Error listing CPUs: {e}")
         raise
+    
+    
+    
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
+def execute_with_cpu_cores(
+    core_count: int, func: Callable, *args: Any, **kwargs: Any
+) -> Any:
+    """
+    Executes a callable using a specified number of currently unused CPU cores.
+
+    Args:
+        core_count (int): The number of CPU cores to run the function on.
+        func (Callable): The function to be executed.
+        *args (Any): Arguments for the callable.
+        **kwargs (Any): Keyword arguments for the callable.
+
+    Returns:
+        Any: The result of the function execution.
+
+    Raises:
+        ValueError: If the number of CPU cores specified is invalid or exceeds available unused cores.
+        RuntimeError: If there is an error executing the function on the specified CPU cores.
+    """
+    try:
+        # Get all CPU cores
+        all_cpus = list_available_cpus()
+        
+        # Find cores currently in use by checking CPU utilization
+        cpu_percent_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+        unused_cores = [
+            cpu for cpu, usage in enumerate(cpu_percent_per_core) 
+            if usage < 10.0  # Consider cores with <10% usage as unused
+        ]
+
+        if not unused_cores:
+            logger.warning("No unused CPU cores found, falling back to all available cores")
+            unused_cores = all_cpus
+
+        if core_count > len(unused_cores) or core_count <= 0:
+            raise ValueError(
+                f"Invalid core count: {core_count}. Available unused CPUs are {unused_cores}."
+            )
+
+        if platform.system() == "Darwin":  # macOS
+            logger.warning(
+                "CPU affinity is not supported on macOS. Skipping setting CPU affinity."
+            )
+        else:
+            # Set CPU affinity to use the specified number of unused cores
+            selected_cores = unused_cores[:core_count]
+            logger.info(
+                f"Setting CPU affinity to unused cores {selected_cores} and executing the function."
+            )
+            psutil.Process().cpu_affinity(selected_cores)
+
+        result = func(*args, **kwargs)
+        logger.info(
+            f"Execution using {core_count} unused CPU cores completed."
+        )
+        return result
+    except Exception as e:
+        logger.error(
+            f"Error executing with {core_count} CPU cores: {e}"
+        )
+        raise
+    
+    
+    
+
+    
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(Exception),
+)
+def execute_with_all_cpu_cores(
+    func: Callable, *args: Any, **kwargs: Any
+) -> Any:
+    """
+    Executes a callable using all currently unused CPU cores.
+
+    Args:
+        func (Callable): The function to be executed.
+        *args (Any): Arguments for the callable.
+        **kwargs (Any): Keyword arguments for the callable.
+
+    Returns:
+        Any: The result of the function execution.
+
+    Raises:
+        RuntimeError: If there is an error executing the function on the CPU cores.
+    """
+    try:
+        # Get all CPU cores
+        all_cpus = list_available_cpus()
+        
+        # Find cores currently in use by checking CPU utilization
+        cpu_percent_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+        unused_cores = [
+            cpu for cpu, usage in enumerate(cpu_percent_per_core) 
+            if usage < 10.0  # Consider cores with <10% usage as unused
+        ]
+
+        if not unused_cores:
+            logger.warning("No unused CPU cores found, falling back to all available cores")
+            unused_cores = all_cpus
+            
+        logger.info(f"Found {len(unused_cores)} unused CPU cores out of {len(all_cpus)} total cores")
+
+        if platform.system() == "Darwin":  # macOS
+            logger.warning(
+                "CPU affinity is not supported on macOS. Skipping setting CPU affinity."
+            )
+        else:
+            # Set CPU affinity to use all unused cores
+            logger.info(
+                f"Setting CPU affinity to unused cores {unused_cores} and executing the function."
+            )
+            psutil.Process().cpu_affinity(unused_cores)
+
+        result = func(*args, **kwargs)
+        logger.info(
+            f"Execution using {len(unused_cores)} unused CPU cores completed."
+        )
+        return result
+    except Exception as e:
+        logger.error(
+            f"Error executing with CPU cores: {e}"
+        )
+        raise
+
+
 
 
 @retry(
@@ -79,51 +220,46 @@ def select_best_gpu() -> Optional[int]:
         return None
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_fixed(1),
-    retry=retry_if_exception_type(Exception),
-)
-def execute_on_cpu(
-    cpu_id: int, func: Callable, *args: Any, **kwargs: Any
-) -> Any:
+def get_cpu_info():
     """
-    Executes a callable on a specific CPU.
-
-    Args:
-        cpu_id (int): The CPU core to run the function on.
-        func (Callable): The function to be executed.
-        *args (Any): Arguments for the callable.
-        **kwargs (Any): Keyword arguments for the callable.
-
-    Returns:
-        Any: The result of the function execution.
-
-    Raises:
-        ValueError: If the CPU core specified is invalid.
-        RuntimeError: If there is an error executing the function on the CPU.
+    Detects available CPU cores using multiple methods for reliability.
+    Returns tuple of (physical_cores, logical_cores, available_cores)
     """
     try:
-        available_cpus = list_available_cpus()
-        if cpu_id not in available_cpus:
-            raise ValueError(
-                f"Invalid CPU core: {cpu_id}. Available CPUs are {available_cpus}."
-            )
+        # Physical cores (excluding hyperthreading)
+        physical = psutil.cpu_count(logical=False) or 1
 
-        if platform.system() == "Darwin":  # macOS
-            logger.warning(
-                "CPU affinity is not supported on macOS. Skipping setting CPU affinity."
-            )
-        else:
-            logger.info(f"Setting CPU affinity to core {cpu_id}.")
-            psutil.Process().cpu_affinity([cpu_id])
+        # Logical cores (including hyperthreading)
+        logical = psutil.cpu_count(logical=True) or physical
 
-        result = func(*args, **kwargs)
-        logger.info(f"Execution on CPU {cpu_id} completed.")
-        return result
+        # Currently available cores (accounting for system restrictions)
+        try:
+            available = len(psutil.Process().cpu_affinity())
+        except AttributeError:  # For systems without affinity support
+            available = logical
+
+        # Sanity checks and adjustments
+        physical = max(1, physical)
+        logical = max(physical, logical)
+        available = max(1, min(available, logical))
+
+        return physical, logical, available
+
     except Exception as e:
-        logger.error(f"Error executing on CPU {cpu_id}: {e}")
-        raise
+        logger.error(f"Error detecting CPU cores: {e}")
+        return 1, 1, 1  # Fallback to minimum safe values
+
+
+def get_optimal_core_count(requested_cores: int = None) -> int:
+    """Returns optimal number of cores to use based on system capabilities"""
+    physical, logical, available = get_cpu_info()
+
+    if requested_cores is None:
+        # Use 75% of available cores by default, minimum of 1
+        return max(1, int(available * 0.75))
+
+    return max(1, min(requested_cores, available))
+
 
 
 @retry(
@@ -174,7 +310,7 @@ def retry_with_backoff(
     wait=wait_fixed(1),
     retry=retry_if_exception_type(Exception),
 )
-def execute_with_cpu_cores(
+def execute_on_cpu(
     core_count: int, func: Callable, *args: Any, **kwargs: Any
 ) -> Any:
     """
@@ -358,6 +494,83 @@ def execute_on_multiple_gpus(
     except Exception as e:
         logger.error(f"Error executing on GPUs {gpu_ids}: {e}")
         raise
+
+
+def distributed_execute_on_gpus(
+    gpu_ids: List[int],
+    func: Callable,
+    *args: Any,
+    num_retries: int = RETRY_COUNT,
+    retry_delay: float = RETRY_DELAY,
+    **kwargs: Any,
+) -> List[Any]:
+    """
+    Executes a callable across multiple GPUs and nodes using Ray's distributed task scheduling.
+
+    Args:
+        gpu_ids (List[int]): List of GPU IDs to run the function on. Must be valid IDs.
+        func (Callable): Function to execute. Must be serializable.
+        *args (Any): Arguments for the callable
+        num_retries (int): Number of retry attempts for failed tasks
+        retry_delay (float): Delay in seconds between retries
+        **kwargs (Any): Keyword arguments for the callable
+
+    Returns:
+        List[Any]: Results from execution on each GPU in order of gpu_ids
+
+    Raises:
+        ValueError: If gpu_ids is empty or contains invalid IDs
+        RuntimeError: If Ray initialization or task execution fails
+        TimeoutError: If execution exceeds maximum retry attempts
+    """
+    if not gpu_ids:
+        raise ValueError("Must specify at least one GPU ID")
+
+    available_gpus = [gpu.id for gpu in GPUtil.getGPUs()]
+    invalid_gpus = [id for id in gpu_ids if id not in available_gpus]
+    if invalid_gpus:
+        raise ValueError(f"Invalid GPU IDs: {invalid_gpus}")
+
+    try:
+        logger.info(
+            f"Executing function across distributed GPUs {gpu_ids}"
+        )
+
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True, log_to_driver=False)
+
+        @ray.remote(num_gpus=1)
+        def task_wrapper(*task_args, **task_kwargs):
+            for attempt in range(num_retries):
+                try:
+                    return func(*task_args, **task_kwargs)
+                except Exception as e:
+                    if attempt == num_retries - 1:
+                        raise
+                    logger.warning(
+                        f"Attempt {attempt + 1} failed: {str(e)}"
+                    )
+                    time.sleep(
+                        retry_delay * (attempt + 1)
+                    )  # Exponential backoff
+
+        # Distribute tasks
+        pool = Pool()
+        result_futures = [
+            pool.apply_async(task_wrapper.remote, args=(args, kwargs))
+            for gpu_id in gpu_ids
+        ]
+        pool.close()
+        pool.join()
+
+        results = [future.get() for future in result_futures]
+        logger.info("Distributed execution completed successfully")
+        return results
+
+    except Exception as e:
+        error_msg = f"Error during distributed execution: {str(e)}"
+        logger.error(error_msg)
+        raise RuntimeError(error_msg) from e
 
 
 # # Example function to run

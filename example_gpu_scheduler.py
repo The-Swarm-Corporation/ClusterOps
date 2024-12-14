@@ -1,4 +1,4 @@
-from clusterops import gpu_scheduler
+from experimental import gpu_scheduler
 
 
 async def sample_task(n: int) -> int:

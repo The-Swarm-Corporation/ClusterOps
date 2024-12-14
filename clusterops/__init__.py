@@ -5,13 +5,15 @@ from clusterops.main import (
     execute_on_gpu,
     execute_on_cpu,
     execute_on_multiple_gpus,
+    distributed_execute_on_gpus,
+    execute_with_all_cpu_cores
+    
 )
 from clusterops.profiling_exec import (
     monitor_resources,
     profile_execution,
-    distributed_execute_on_gpus,
 )
-from clusterops.gpu_scheduler import GPUJobExecutor, JobScheduler, gpu_scheduler
+
 
 __all__ = [
     "list_available_cpus",
@@ -21,9 +23,7 @@ __all__ = [
     "execute_on_multiple_gpus",
     "monitor_resources",
     "profile_execution",
-    "GPUJobExecutor",
     "execute_on_cpu",
-    "JobScheduler",
-    "gpu_scheduler",
     "distributed_execute_on_gpus",
+    "execute_with_all_cpu_cores",
 ]
